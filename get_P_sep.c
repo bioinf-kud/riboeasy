@@ -12,34 +12,39 @@ double sample_number(int tid,int* cover,bam_hdr_t*header);
 double t_mean(int tid,int* cover,bam_hdr_t*header);
 double t_sigma(int tid,int* cover,bam_hdr_t*header);
 double t_skewness(int tid,int* cover,bam_hdr_t*header);
+int length(char*a);
+void copystr(char*a,char*b);
 int main(int argc, char **argv){//need the directory of bamfile as input
     bam_hdr_t *header;//record the header of the bam file
     bam1_t *aln = bam_init1();//keep the information of every row of bam file
     struct transcript*tlist;//record transcript information
-    FILE*wt,*wc,*wf27,*wf28,*wf29,*wf30,*wf31,*wf32;
+    FILE*wt,*wc,*wf27,*wf28,*wf29,*wf30,*wf31;
     samFile *in = sam_open(argv[1], "r");  //open bam file
-    wf27=fopen(strcat(argv[2],".l27.wig"),"a+");
-    wf28=fopen(strcat(argv[2],".l28.wig"),"a+");
-    wf29=fopen(strcat(argv[2],".l29.wig"),"a+");
-    wf30=fopen(strcat(argv[2],".l30.wig"),"a+");
-    wf31=fopen(strcat(argv[2],".l31.wig"),"a+");
-    wf32=fopen(strcat(argv[2],".l32.wig"),"a+");//create wig file
+    char a[100];
+    copystr(a,argv[2]);
+    wf27=fopen(strcat(a,".l27.wig"),"w+");
+    copystr(a,argv[2]);
+    wf28=fopen(strcat(a,".l28.wig"),"w+");
+    copystr(a,argv[2]);
+    wf29=fopen(strcat(a,".l29.wig"),"w+");
+    copystr(a,argv[2]);
+    wf30=fopen(strcat(a,".l30.wig"),"w+");
+    copystr(a,argv[2]);
+    wf31=fopen(strcat(a,".l31.wig"),"w+");//create wig file
     //wt=fopen(argv[3],"a+");//create tsv file
-    wc=fopen(argv[4],"a+");//create tsv2 file
+    wc=fopen(argv[4],"w+");//create tsv2 file
     //fprintf(wt,"ENST\tlength\tread_count(bp)\tmean\tstandard_deviation\tskewness\n");
     struct p_offset plist[6];//record the position of p site
     plist[0].length=27;
     plist[0].p_coord=11;
     plist[1].length=28;
-    plist[1].p_coord=12;
+    plist[1].p_coord=11;
     plist[2].length=29;
     plist[2].p_coord=12;
     plist[3].length=30;
-    plist[3].p_coord=13;
+    plist[3].p_coord=12;
     plist[4].length=31;
-    plist[4].p_coord=13;
-    plist[5].length=32;
-    plist[5].p_coord=14;
+    plist[4].p_coord=12;
     header = sam_hdr_read(in);
     int stat=sam_read1(in, header, aln);
     /*
@@ -49,20 +54,18 @@ int main(int argc, char **argv){//need the directory of bamfile as input
         < -1    error
     */
     int ctid=aln->core.tid; //record current transcript id
-    int*tcover27,*tcover28,*tcover29,*tcover30,*tcover31,*tcover32;//record reads coverage of current transcript
+    int*tcover27,*tcover28,*tcover29,*tcover30,*tcover31;//record reads coverage of current transcript
     tcover27 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
     tcover28 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
     tcover29 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
     tcover30 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
     tcover31 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
-    tcover32 =(int*)malloc(sizeof(int)*(*(header->target_len+ctid)));
     for(int i=0;i<(*(header->target_len+ctid));i++){//initialization
         *(tcover27+i)=0; 
         *(tcover28+i)=0; 
         *(tcover29+i)=0; 
         *(tcover30+i)=0; 
-        *(tcover31+i)=0;  
-        *(tcover32+i)=0;       
+        *(tcover31+i)=0;        
     }
     int flag=1;//use to break loop
     if(stat<-1) flag=0;
@@ -82,21 +85,47 @@ int main(int argc, char **argv){//need the directory of bamfile as input
         if(aln->core.l_qseq==plist[4].length){
             *(tcover31+aln->core.pos+plist[4].p_coord)+=1;
         }
-        if(aln->core.l_qseq==plist[5].length){
-            *(tcover32+aln->core.pos+plist[5].p_coord)+=1;
-        }
     }
     while(flag==1){
         stat=sam_read1(in, header, aln);
         if(stat<-1) flag=0;
         if(stat==-1) flag=2;
         if((aln->core.tid)!=ctid){
-            write_wig(ctid,tcover27,header,wf27);
-            write_wig(ctid,tcover28,header,wf28);
-            write_wig(ctid,tcover29,header,wf29);
-            write_wig(ctid,tcover30,header,wf30);
-            write_wig(ctid,tcover31,header,wf31);
-            write_wig(ctid,tcover32,header,wf32);
+            int cnt=0;
+            for(int i=0;i<(*(header->target_len+ctid));i++){
+                if(*(tcover27+i)!=0) cnt++;
+            }
+            if(cnt!=0){
+                write_wig(ctid,tcover27,header,wf27);
+            }
+            cnt=0;
+            for(int i=0;i<(*(header->target_len+ctid));i++){
+                if(*(tcover28+i)!=0) cnt++;
+            }
+            if(cnt!=0){
+                write_wig(ctid,tcover28,header,wf28);
+            }
+            cnt=0;
+            for(int i=0;i<(*(header->target_len+ctid));i++){
+                if(*(tcover29+i)!=0) cnt++;
+            }
+            if(cnt!=0){
+                write_wig(ctid,tcover29,header,wf29);
+            }
+            cnt=0;
+            for(int i=0;i<(*(header->target_len+ctid));i++){
+                if(*(tcover30+i)!=0) cnt++;
+            }
+            if(cnt!=0){
+                write_wig(ctid,tcover30,header,wf30);
+            }
+            cnt=0;
+            for(int i=0;i<(*(header->target_len+ctid));i++){
+                if(*(tcover31+i)!=0) cnt++;
+            }
+            if(cnt!=0){
+                write_wig(ctid,tcover31,header,wf31);
+            }
             //write_cover_tsv(ctid,tcover,header,wc);
             //fprintf(wt,"%s\t%d\t%f\t%f\t%f\t%f\n",*(header->target_name+ctid),*(header->target_len+ctid),sample_number(ctid,tcover,header),t_mean(ctid,tcover,header),t_sigma(ctid,tcover,header),t_skewness(ctid,tcover,header));
             ctid=aln->core.tid;
@@ -105,14 +134,12 @@ int main(int argc, char **argv){//need the directory of bamfile as input
             tcover29 =(int*)realloc(tcover29,sizeof(int)*(*(header->target_len+ctid)));
             tcover30 =(int*)realloc(tcover30,sizeof(int)*(*(header->target_len+ctid)));
             tcover31 =(int*)realloc(tcover31,sizeof(int)*(*(header->target_len+ctid)));
-            tcover32 =(int*)realloc(tcover32,sizeof(int)*(*(header->target_len+ctid)));
             for(int i=0;i<(*(header->target_len+ctid));i++){//initialization
                 *(tcover27+i)=0; 
                 *(tcover28+i)=0; 
                 *(tcover29+i)=0; 
                 *(tcover30+i)=0; 
-                *(tcover31+i)=0;  
-                *(tcover32+i)=0;       
+                *(tcover31+i)=0;        
             }
         }
         if(aln->core.l_qseq==plist[0].length){
@@ -130,9 +157,6 @@ int main(int argc, char **argv){//need the directory of bamfile as input
         if(aln->core.l_qseq==plist[4].length){
             *(tcover31+aln->core.pos+plist[4].p_coord)+=1;
         }
-        if(aln->core.l_qseq==plist[5].length){
-            *(tcover32+aln->core.pos+plist[5].p_coord)+=1;
-        }
     }
     if(flag==2) printf("Finished successfully!\n");
     if(flag==0) printf("Read error, please check your bam file.\n");
@@ -145,7 +169,6 @@ int main(int argc, char **argv){//need the directory of bamfile as input
     fclose(wf29);
     fclose(wf30);
     fclose(wf31);
-    fclose(wf32);
     //fclose(wt);
     fclose(wc);
     return 0;
@@ -231,4 +254,32 @@ double t_skewness(int tid,int* cover,bam_hdr_t*header){
         skewness+=(*(cover+i))*pow((i+1-mean)/sigma,3);
     skewness=skewness/cnt;
     return skewness;
+}
+int length(char*a){
+    int cnt=0;
+    while(a[cnt]!='\0'){
+        if(a[cnt]=='\n'){
+            a[cnt]='\0';
+            break;
+        }
+        cnt++;
+    }
+    return cnt;
+}
+void copystr(char*a,char*b){//b--->a
+    int la=length(a),lb=length(b);
+    if(la>lb){
+        for(int i=0;i<la;i++){
+            if(i<lb)
+                *(a+i)=*(b+i);
+            else
+                *(a+i)='\0';
+        }
+    }
+    else{
+        for(int i=0;i<lb;i++){
+            *(a+i)=*(b+i);
+        *(a+lb)='\0';
+    }
+    }
 }

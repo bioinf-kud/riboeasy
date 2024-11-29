@@ -17,6 +17,10 @@ struct count_feature{
     int UTR5;
     int UTR3;
     int CDS;
+    int UTR5len;
+    int UTR3len;
+    int CDSlen;
+    int start50;
     };
 void read_wig(FILE *f, int n, int *coverage);
 int read_annotation(FILE *f, struct trans_structure *annotation);
@@ -30,7 +34,6 @@ int main(int argc,char**argv){
     wig=fopen(argv[2],"r");//open wiggle file for scan
     tsv=fopen(argv[1],"r");//open annotation
     out1=fopen(argv[3],"w+");//open output tsv1
-    out2=fopen(argv[4],"w+");//open output tsv2
     int length =24000;
     int translen=0;
     char ENST[25];
@@ -44,11 +47,6 @@ int main(int argc,char**argv){
     length=read_annotation(tsv,annotation);
     int flag = 0;//record the length of features
     int b=-1;
-    fprintf(out2,"transcript_id");
-    for(int i=0;i<200;i++){
-        fprintf(out2,"\tP%d",i-100);
-    }
-    fprintf(out2,"\n");
     while(1){
         a=read_head(ENST,&translen,wig);
         if (a==1){
@@ -74,6 +72,10 @@ int main(int argc,char**argv){
                 count[flag].UTR5=0;
                 count[flag].UTR3=0;
                 count[flag].CDS=0;
+                count[flag].start50=0;
+                count[flag].UTR5len=annotation[i].start_coord;
+                count[flag].UTR3len=translen-annotation[i].stop_coord;
+                count[flag].CDSlen=annotation[i].stop_coord-annotation[i].start_coord+1;
                 for(int j=0;j<annotation[i].start_coord;j++){
                     count[flag].UTR5+=coverage[j];
                 }
@@ -83,26 +85,11 @@ int main(int argc,char**argv){
                 for(int j=annotation[i].start_coord;j<annotation[i].stop_coord;j++){
                     count[flag].CDS+=coverage[j];
                 }
-                flag++;
-                for(int j=0;j<200;j++){
-                    if((annotation[i].start_coord-101+j)<0)
-                        outcoverage[j]=0;
-                    else if((annotation[i].start_coord-101+j)>=translen)
-                        outcoverage[j]=0;
-                    else
-                        outcoverage[j]=coverage[annotation[i].start_coord-101+j];
+                for(int j=annotation[i].start_coord;j<annotation[i].start_coord+50;j++){
+                    count[flag].start50+=coverage[j];
                 }
-                fprintf(out2,"%s",ENST);
-                //printf("%s\n",ENST);
-                //printf("%s\n",annotation[i].transcript_id);
-                for(int i=0;i<200;i++){
-                    fprintf(out2,"\t%d",outcoverage[i]);
-                 }
-                fprintf(out2,"\n");
-                //printf("%d\n",flag);
-                break;
-            }
-            
+                flag++;
+            } 
         }  
         free(coverage);
     }
@@ -110,7 +97,6 @@ int main(int argc,char**argv){
     fclose(wig);
     fclose(tsv);
     fclose(out1);
-    fclose(out2);
 }
 int read_annotation(FILE *f, struct trans_structure *annotation){
     int cnt=0;
@@ -185,8 +171,8 @@ void copystr(char*a,char*b){//b--->a
     }
 }
 void write_coverage(FILE *f, struct count_feature *count,int length){
-    fprintf(f,"gene_id\ttranscript_id\tstrand\tlength\tUTR5\tCDS\tUTR3\n");
+    fprintf(f,"gene_id\ttranscript_id\tstrand\tlength\tUTR5\tCDS\tUTR3\tSTART50\tUTR5len\tCDSlen\tUTR3len\n");
     for(int i=0;i<length;i++){
-        fprintf(f,"%s\t%s\t%c\t%d\t%d\t%d\t%d\n",count[i].gene_id,count[i].transcript_id,count[i].strand,count[i].length,count[i].UTR5,count[i].CDS,count[i].UTR3);
+        fprintf(f,"%s\t%s\t%c\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",count[i].gene_id,count[i].transcript_id,count[i].strand,count[i].length,count[i].UTR5,count[i].CDS,count[i].UTR3,count[i].start50,count[i].UTR5len,count[i].CDSlen,count[i].UTR3len);
     }
 }
